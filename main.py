@@ -198,7 +198,53 @@ def main_worker(gpu, ngpus_per_node, args):
 
     # Data loading code
     train_sampler = None
-    if args.dataset not in ['imagenet', 'imagenet_subset_200']:
+    
+    print(f"Dataset arg: {args.dataset}")
+    
+    if args.dataset == 'coarse_tiny_imagenet':
+        traindir = "/share/gabriele/Regularization-Pruning/data/tiny-imagenet-200"
+        valdir = "/share/gabriele/Regularization-Pruning/data/tiny-imagenet-200/val"
+        testdir = "/share/gabriele/Regularization-Pruning/data/tiny-imagenet-200/test"
+        
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                        std=[0.229, 0.224, 0.225])
+
+        train_dataset = datasets.ImageFolder(
+            traindir,
+            transforms.Compose([
+                transforms.RandomResizedCrop(64),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                normalize,
+            ]))
+
+        if args.distributed:
+            train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
+            num_workers=args.workers, pin_memory=True, sampler=train_sampler)
+
+        val_loader = torch.utils.data.DataLoader(
+            datasets.ImageFolder(valdir, transforms.Compose([
+                transforms.Resize(64),
+                transforms.CenterCrop(64),
+                transforms.ToTensor(),
+                normalize,
+            ])),
+            batch_size=args.batch_size, shuffle=False,
+            num_workers=args.workers, pin_memory=True)
+
+        test_set = datasets.ImageFolder(testdir, 
+            transforms.Compose([
+                transforms.Resize(64),
+                transforms.CenterCrop(64),
+                transforms.ToTensor(),
+                normalize,
+            ]))
+        
+        print('number of test example: %d' % len(test_set))
+    elif args.dataset not in ['imagenet', 'imagenet_subset_200']:
         loader = Data(args)
         train_loader = loader.train_loader
         val_loader = loader.test_loader
@@ -253,7 +299,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 train_dataset, batch_size=args.batch_size_prune, shuffle=(train_sampler is None),
                 num_workers=args.workers, pin_memory=True, sampler=train_sampler)
         else:
-            train_loader_prune = loader.train_loader_prune
+            train_loader_prune = train_loader
 
         # get the original unpruned model statistics
         # n_params_original = get_n_params(model) # old imple, deprecated 
@@ -672,7 +718,7 @@ def accuracy(output, target, topk=(1,)):
 
         res = []
         for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
 

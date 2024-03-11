@@ -38,6 +38,7 @@ num_classes_dict = {
     'imagenet': 1000,
     'imagenet_subset_200': 200,
     'tiny_imagenet': 200,
+    'coarse_tiny_imagenet': 25,
 }
 
 img_size_dict = {
@@ -46,4 +47,5 @@ img_size_dict = {
     'cifar100': 32,
     'imagenet': 224,
     'tiny_imagenet': 64,
+    'coarse_tiny_imagenet': 64,
 }
