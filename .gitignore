@@ -8,3 +8,14 @@ data/imagenet*
 base_models
 model/*.th
 train_params/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
